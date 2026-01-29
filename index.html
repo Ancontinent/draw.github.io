@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能搬运比赛抽签系统</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f5f5f5;
+        }
+        .header {
+            text-align: center;
+            margin: 20px 0;
+            width: 100%;
+        }
+        .header h1 {
+            color: #2e7d32;
+            margin-bottom: 5px;
+        }
+        .header h2 {
+            color: #388e3c;
+            margin-top: 0;
+            font-size: 16px;
+        }
+        .map-container {
+            width: 95vw; /* 占屏幕宽度的 95% */
+			aspect-ratio: 1772 / 886; /* 保持原始宽高比 ≈ 2:1 */
+			max-width: 1772px; /* 大屏上不超过原图尺寸 */
+			margin-bottom: 20px;
+			background-image: url('images/bg.jpg');
+			background-size: contain; /* 或 cover，根据需求 */
+			background-repeat: no-repeat;
+			background-position: center;
+			border-radius: 10px;
+			box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+			position: relative;
+			margin: 0 auto 20px;
+        }
+        .area {
+			position: absolute;
+			width: clamp(28px 3.5vw, 80px);
+			aspect-ratio: 1 / 1; /* 确保为正方形 */
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+		}
+        .color-box {
+            width: 100%;
+            height: 100%;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: clamp(9px, 2.2vw, 14px);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            text-align: center;
+            line-height: 1.2;
+			padding: 1px 2px;
+        }
+        .area-label {
+            font-size: 12px;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+            margin-top: 5px;
+            text-align: center;
+        }
+        .controls {
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        label {
+            font-weight: bold;
+            color: #2e7d32;
+        }
+        select {
+            padding: 8px 12px;
+            border-radius: 5px;
+            border: 1px solid #81c784;
+            background-color: #f1f8e9;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #388e3c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2e7d32;
+        }
+        .empty .color-box {
+            background-color: rgba(255,255,255,0.3) !important;
+            color: rgba(255,255,255,0.7);
+            border: 2px dashed rgba(255,255,255,0.5);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>智能搬运比赛抽签系统</h1>
+        <h2>Intelligent Handling Competition Draw System</h2>
+    </div>
+    
+    <div class="controls">
+        <label for="countSelect">垃圾数量：</label>
+        <select id="countSelect">
+            <option value="4">4个</option>
+            <option value="6">6个</option>
+            <option value="8">8个</option>
+        </select>
+        <button id="drawButton">随机分配</button>
+    </div>
+    
+    <div class="map-container">
+        <!-- 左侧4个区域 -->
+        <div class="area" id="left1" style="top: 16.36%; left: 1.41%;">
+            <div class="color-box"></div>
+            <div class="area-label"></div>
+        </div>
+        <div class="area" id="left2" style="top: 36.12%; left: 4.51%;">
+            <div class="color-box"></div>
+            <div class="area-label"></div>
+        </div>
+        <div class="area" id="left3" style="top: 56.43%; left: 6.49%;">
+            <div class="color-box"></div>
+            <div class="area-label"></div>
+        </div>
+        <div class="area" id="left4" style="top: 75.62%; left: 4.51%;">
+            <div class="color-box"></div>
+            <div class="area-label"></div>
+        </div>
+        
+        <!-- 右侧4个区域 -->
+        <div class="area" id="right1" style="top: 16.36%; left: 93.96%;">
+            <div class="color-box"></div>
+            <div class="area-label"></div>
+        </div>
+        <div class="area" id="right2" style="top: 36.12%; left: 90.86%;">
+            <div class="color-box"></div>
+            <div class="area-label"></div>
+        </div>
+        <div class="area" id="right3" style="top: 56.43%; left: 88.88%;">
+            <div class="color-box"></div>
+            <div class="area-label"></div>
+        </div>
+        <div class="area" id="right4" style="top: 75.62%; left: 90.86%;">
+            <div class="color-box"></div>
+            <div class="area-label"></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 垃圾类型对应的颜色
+            const wasteColors = {
+                '有害垃圾': '#ff5722',    // 橙色
+                '其他垃圾': '#9e9e9e',    // 灰色
+                '餐厨垃圾': '#8bc34a',    // 浅绿色
+                '可回收物': '#2196f3'     // 蓝色
+            };
+            
+            const areas = [
+                'left1', 'left2', 'left3', 'left4',
+                'right1', 'right2', 'right3', 'right4'
+            ];
+            
+            // 获取垃圾类型名称
+            function getWasteType(areaId) {
+                const area = document.getElementById(areaId);
+                return area.querySelector('.area-label').textContent.split('\n')[0];
+            }
+            
+            function getRandomPositions(count) {
+                let positions = [0, 1, 2, 3, 4, 5, 6, 7];
+                
+                // 打乱数组顺序
+                for (let i = positions.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [positions[i], positions[j]] = [positions[j], positions[i]];
+                }
+                
+                return positions.slice(0, count);
+            }
+            
+            function getColorPool(count) {
+                const wasteTypes = ['有害垃圾', '其他垃圾', '餐厨垃圾', '可回收物'];
+                let colorPool = [];
+                
+                if (count === 4) {
+                    // 4种：每种垃圾类型各一个
+                    colorPool = [...wasteTypes];
+                } else if (count === 6) {
+                    // 6种：每种垃圾类型至少一个，再随机选两种各加一个
+                    colorPool = [...wasteTypes];
+                    const extraTypes = [...wasteTypes];
+                    for (let i = extraTypes.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [extraTypes[i], extraTypes[j]] = [extraTypes[j], extraTypes[i]];
+                    }
+                    colorPool.push(extraTypes[0], extraTypes[1]);
+                } else if (count === 8) {
+                    // 8种：每种垃圾类型各两个
+                    colorPool = [...wasteTypes, ...wasteTypes];
+                }
+                
+                // 打乱顺序
+                for (let i = colorPool.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [colorPool[i], colorPool[j]] = [colorPool[j], colorPool[i]];
+                }
+                
+                return colorPool;
+            }
+            
+            function drawColors() {
+                const count = parseInt(document.getElementById('countSelect').value);
+                
+                // 清空所有区域
+                areas.forEach(areaId => {
+                    const area = document.getElementById(areaId);
+                    const colorBox = area.querySelector('.color-box');
+                    colorBox.style.backgroundColor = '';
+                    colorBox.textContent = '';
+                    area.classList.remove('empty');
+                    area.style.display = '';
+                });
+                
+                // 获取随机位置
+                const colorPositions = getRandomPositions(count);
+                
+                // 获取颜色池
+                const colorPool = getColorPool(count);
+                
+                // 在选定的位置放置颜色
+                colorPositions.forEach((pos, index) => {
+                    const areaId = areas[pos];
+                    const area = document.getElementById(areaId);
+                    const colorBox = area.querySelector('.color-box');
+                    const wasteType = colorPool[index];
+                    const color = wasteColors[wasteType];
+                    
+                    colorBox.style.backgroundColor = color;
+                    colorBox.textContent = wasteType;
+                });
+                
+                // 标记空区域
+                areas.forEach((areaId, index) => {
+                    if (!colorPositions.includes(index)) {
+                        const area = document.getElementById(areaId);
+                        area.style.display = 'none';
+                        //area.classList.add('empty');
+                        //area.querySelector('.color-box').textContent = '';
+                    }
+                });
+            }
+            
+            document.getElementById('drawButton').addEventListener('click', drawColors);
+            
+            // 初始加载时执行一次抽签
+            //drawColors();
+        });
+    </script>
+</body>
+</html>
